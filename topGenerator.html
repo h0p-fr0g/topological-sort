@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topological Sort</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: monospace;
+            resize: vertical;
+            min-height: 100px;
+        }
+        .input-info {
+            font-size: 14px;
+            color: #666;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            min-height: 50px;
+        }
+        .result-box h3 {
+            margin-top: 0;
+        }
+    </style>
+
+    <script>
+
+        class Precedence {
+
+            constructor(relations) {
+
+              this.successors = new Map();
+              this.inDegrees = new Map();
+              this.allNodes = new Set();
+
+              for (const [predecessor, successor] of relations) {
+                this.allNodes.add(predecessor);
+                this.allNodes.add(successor);
+
+                if (!this.successors.has(predecessor)) {
+                  this.successors.set(predecessor, new Set());
+                }
+                if (!this.inDegrees.has(predecessor)) {
+                  this.inDegrees.set(predecessor, 0);
+                }
+                if (!this.inDegrees.has(successor)) {
+                  this.inDegrees.set(successor, 0);
+                }
+
+                this.successors.get(predecessor).add(successor);
+                this.inDegrees.set(successor, this.inDegrees.get(successor) + 1);
+              }
+            }
+
+
+            *[Symbol.iterator]() {
+            
+              const currentInDegrees = new Map(this.inDegrees);
+              const successors = this.successors;
+              const allNodes = this.allNodes;
+              let nodesProcessed = 0;
+              
+              const queue = [];
+              for (const node of allNodes) {
+                if (currentInDegrees.get(node) === 0) {
+                  queue.push(node);
+                }
+              }
+              
+              queue.sort();
+
+              while(queue.length > 0){
+
+                const currentNode = queue.shift();
+                nodesProcessed++;
+
+                yield currentNode;
+
+                const currentSuccessors = successors.get(currentNode);
+                if (currentSuccessors) {
+                    for (const successor of currentSuccessors) {
+                        const newDegree = currentInDegrees.get(successor) - 1;
+                        currentInDegrees.set(successor, newDegree);
+
+                        if (newDegree === 0) {
+                            queue.push(successor);
+                        }
+                    }
+                    queue.sort();
+                }
+              }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+
+            const sortButton = document.getElementById('sortButton');
+            sortButton.addEventListener('click', sortRelations);
+
+            runTests();
+
+        });
+
+
+        function sortRelations() {
+            const inputElement = document.getElementById('relationsInput');
+            const outputElement = document.getElementById('resultOutput');
+            const rawInput = inputElement.value.trim();
+
+            if (!rawInput) {
+                outputElement.innerHTML = '<span style="color: red;">Please enter the precedence relations.</span>';
+                return;
+            }
+
+            const lines = rawInput.split(/[\n,]/)
+                                .map(line => line.trim())
+                                .filter(line => line.length > 0);
+            
+            const relations = [];
+            
+            const relationPattern = /^\s*([\w\s\-\(\)]+)\s*->\s*([\w\s\-\(\)]+)\s*$/i;
+            
+            for (const line of lines) {
+                const match = line.match(relationPattern);
+                
+                if (match) {
+                    relations.push([match[1].trim(), match[2].trim()]);
+                } else {
+                    outputElement.innerHTML = `<span style="color: red; font-weight: bold;">PARSING ERROR:</span><br>The line <code>"${line}"</code> could not be recognized as a valid precedence relation (format: A -> B).`;
+                    return;
+                }
+            }
+
+            
+            const v = new Precedence(relations); 
+
+            const result = [];
+            const allNodesCount = v.allNodes.size; 
+            
+            for (const nextActivity of v) {
+                result.push(nextActivity);
+            }
+            
+            // Cycle check
+            if (result.length < allNodesCount) {
+                outputElement.innerHTML = `<span style="color: red; font-weight: bold;">ERROR: The precedence relations contain a cycle!</span>`;
+            } 
+            else {
+                outputElement.innerHTML = result.join(' → ');
+            }
+        }
+
+        function runTests() {
+            console.log("--- STARTING PRECEDENCE GENERATOR TESTS ---");
+            let passedTests = 0;
+            let totalTests = 0;
+
+            const assertTest = (name, testFunction, expected) => {
+                totalTests++;
+                let actual;
+                try {
+                    actual = testFunction();
+                    const success = JSON.stringify(actual) === JSON.stringify(expected);
+                    if (success) {
+                        console.log(`✅ TEST PASSED: ${name}`);
+                        passedTests++;
+                    } else {
+                        console.error(`❌ TEST FAILED: ${name}`);
+                        console.error(`  Expected: ${JSON.stringify(expected)}`);
+                        console.error(`  Received: ${JSON.stringify(actual)}`);
+                    }
+                } catch (e) {
+                    console.error(`❌ TEST FAILED (Exception): ${name}`, e);
+                }
+            };
+
+            assertTest(
+                "1. TopSort with parallels (student life)",
+                () => {
+                    const relations = [
+                        ["sleep", "study"],
+                        ["eat", "study"],
+                        ["study", "exam"]
+                    ];
+                    const v = new Precedence(relations);
+                    return Array.from(v);
+                },
+                ["eat", "sleep", "study", "exam"] 
+            );
+
+            
+            assertTest(
+                "2. Sequential chain (A -> B -> C)",
+                () => {
+                    const relations = [
+                        ["A", "B"],
+                        ["B", "C"],
+                        ["C", "D"]
+                    ];
+                    const v = new Precedence(relations);
+                    return Array.from(v);
+                },
+                ["A", "B", "C", "D"]
+            );
+
+            assertTest(
+                "3. Converging graph (multiple sources)",
+                () => {
+                    const relations = [
+                        ["Task1", "Final"],
+                        ["Task2", "Final"],
+                        ["Start", "Task1"]
+                    ];
+                    const v = new Precedence(relations);
+                    return Array.from(v); 
+                },
+                ["Start", "Task1", "Task2", "Final"] 
+            );
+
+            assertTest(
+                "4. Cycle detection (A -> B -> A)",
+                () => {
+                    const relations = [
+                        ["A", "B"],
+                        ["B", "C"],
+                        ["C", "A"]
+                    ];
+                    const v = new Precedence(relations);
+                    const result = Array.from(v);
+                    return result.length < v.allNodes.size; 
+                },
+                true
+            );
+            
+            assertTest(
+                "5. Empty input",
+                () => {
+                    const relations = [];
+                    const v = new Precedence(relations);
+                    return Array.from(v); 
+                },
+                []
+            );
+
+
+            console.log("---------------------------------------");
+            console.log(`RESULT: ${passedTests} of ${totalTests} tests passed.`);
+            console.log("---------------------------------------");
+        }
+
+
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <h1>Topological Sort</h1>
+    
+    <label for="relationsInput">Precedence relations (e.g. A -> B, B -> C, one per line):</label>
+    <textarea id="relationsInput" placeholder="A -> B&#10;B -> C&#10;D -> A" required></textarea>
+    <div class="input-info">
+        Each relation states which task must be completed before another.
+    </div>
+
+    <button id="sortButton">Sort Topologically</button>
+
+    <hr>
+
+    <div class="result-box">
+        <h3>Sort Result:</h3>
+        <p id="resultOutput"></p>
+    </div>
+</div>
+
+</body>
+</html>
