@@ -11,7 +11,7 @@ Topological sorting of precedence relations, implemented in vanilla JavaScript. 
 
 ## Running it
 
-No dependencies. Open `topGenerator.html` in any modern browser. The tests run automatically on load — open the browser console to see the results.
+No dependencies. Open `index.html` in any modern browser. The tests run automatically on load — open the browser console to see the results.
 
 ## Tech
 
