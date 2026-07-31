@@ -2,6 +2,8 @@
 
 Topological sorting of precedence relations, implemented in vanilla JavaScript. A `Precedence` class holds the graph and exposes the sort as an ES6 generator (`function*` / `yield`), so the next runnable task is produced on demand.
 
+**[Live Demo](https://h0p-fr0g.github.io/topological-sort/)**
+
 ## Features
 
 - Kahn's algorithm exposed via `Symbol.iterator` as a generator
